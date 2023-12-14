@@ -21,6 +21,39 @@ def readFasta(fastaFile):
     
     return headers, genomes
 
+def convert_to_amino_acids(codon_counts, conversion_table):
+    amino_acid_counts = {}
+    for codon, count in codon_counts.items():
+        amino_acid = conversion_table.get(codon, "Not Found in Conversion Table")
+        if amino_acid not in amino_acid_counts:
+            amino_acid_counts[amino_acid] = count
+        else:
+            amino_acid_counts[amino_acid] += count
+
+    return amino_acid_counts
+
+def countAminos(df, genomes):
+    codon_to_amino_acid = {}
+    with open("codon_table.txt", "r") as file:
+        for line in file:
+            fields = line.strip().split()
+            if len(fields) >= 3:
+                codon, amino_acid = fields[:2]
+                codon_to_amino_acid[codon] = amino_acid
+    cCounts = {}
+    for genome in genomes:
+        for j in range(0, len(genome[i]), 3):
+                codon = genome[i][j : j + 3]
+                # Break if codon is too short to be a codon, else, increment counts for this codon
+                if len(codon) < 3:
+                    break
+                elif codon not in cCounts:
+                    cCounts[codon] = 1
+                else:
+                    cCounts[codon] += 1
+    aCounts = convert_to_amino_acids(cCounts, codon_to_amino_acid)
+    return aCounts
+
 def readCSV(csvFile):
     df = pd.read_csv(csvFile)
     return df
