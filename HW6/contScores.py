@@ -32,7 +32,8 @@ def convert_to_amino_acids(codon_counts, conversion_table):
 
     return amino_acid_counts
 
-def countAminos(df, genomes):
+#returns a dictionsary like : aminoCounts = {header1: {leucine: 10, proline: 10}, header2: {leusine: 10, proline: 10}}
+def countAminos(headers, genomes):
     codon_to_amino_acid = {}
     with open("codon_table.txt", "r") as file:
         for line in file:
@@ -40,19 +41,22 @@ def countAminos(df, genomes):
             if len(fields) >= 3:
                 codon, amino_acid = fields[:2]
                 codon_to_amino_acid[codon] = amino_acid
-    cCounts = {}
-    for genome in genomes:
-        for j in range(0, len(genome[i]), 3):
-                codon = genome[i][j : j + 3]
-                # Break if codon is too short to be a codon, else, increment counts for this codon
-                if len(codon) < 3:
-                    break
-                elif codon not in cCounts:
-                    cCounts[codon] = 1
-                else:
-                    cCounts[codon] += 1
-    aCounts = convert_to_amino_acids(cCounts, codon_to_amino_acid)
-    return aCounts
+    aminoCounts = {}
+    for i in range(len(genomes)):
+        if headers[i] not in aminoCounts:
+            cCounts = {}
+            for j in range(0, len(genomes[i]), 3):
+                    codon = genomes[j : j + 3]
+                    # Break if codon is too short to be a codon, else, increment counts for this codon
+                    if len(codon) < 3:
+                        break
+                    elif codon not in cCounts:
+                        cCounts[codon] = 1
+                    else:
+                        cCounts[codon] += 1
+            aCounts = convert_to_amino_acids(cCounts, codon_to_amino_acid)
+            aminoCounts[headers[i]] = aCounts
+    return aminoCounts
 
 def readCSV(csvFile):
     df = pd.read_csv(csvFile)
@@ -72,6 +76,9 @@ def findCont(df):
         scoresDict[name] = uploads_count
 
     return scoresDict
+
+def createDF(df, headers, genomes):
+    
 
 def main():
     csvFileName = sys.argv[1]
