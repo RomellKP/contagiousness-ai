@@ -77,14 +77,29 @@ def findCont(df):
 
     return scoresDict
 
-def createDF(df, headers, genomes):
-    
+#creates a data frame from data organized like: data = [{Label: ***, Contagiousness_Score: ***, proline: ***, ...}, {Label: ***, ...}, ...]
+def createDF(headers, genomes, scoresDict):
+    data = []
+    aminoCounts = countAminos(headers, genomes)
+    for i in range(len(headers)):
+        if headers[i] in scoresDict:
+            curAminoCount = aminoCounts[headers[i]]
+            curAminoCount['Label'] = headers[i]
+            curAminoCount['Contagiousness_Score'] = scoresDict[headers[i]]
+            data.append(curAminoCount)
+    newDF = pd.DataFrame(data)
+    return newDF
+
 
 def main():
     csvFileName = sys.argv[1]
+    fastaFileName = sys.argv[2]
     df = readCSV(csvFileName)
     scoresDict = findCont(df)
-    print(scoresDict) 
+    print(scoresDict)
+    headers, genomes = readFasta(fastaFileName)
+    newDF = createDF(df, headers, genomes, scoresDict)
+    print(newDF) 
      
      
 if __name__ == "__main__":
