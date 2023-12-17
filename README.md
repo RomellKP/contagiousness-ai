@@ -1,6 +1,6 @@
 ### CONTAGIOUSNESS CNN
 ## Romell Padua & Thomas Knickerbocker
-### 12/2023
+12/2023
 
 ### Structure:
 - **data:** contains data to run on. goodSet.fasta resembles how actual downloaded data will look
