@@ -1,58 +1,59 @@
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from amino_nn import AminoAcidNN
 import nn_helpers as nh
 
-# Set random seed for reproducibility
-torch.manual_seed(42)
-np.random.seed(42)
+# Load data from the "processed_data.csv" file
+df = pd.read_csv('../data/processed_data.csv')
 
-# Amino acid data preparation (replace this with your actual data)
-amino_acid_data = np.random.rand(100, 20)  # Example: 100 samples, 20 features (amino acids)
+# Extract X & y from dataframe
+y = df['Contagiousness_Score'].values
+df = df.drop(columns='Contagiousness_Score')
+X = df.values
 
-# Assuming you have a target variable representing contagiousness
-contagiousness_labels = np.random.randint(2, size=100)  # Binary labels for contagiousness
+# Split the data into training and testing sets (80/20 split)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Convert NumPy arrays to PyTorch tensors
-amino_acid_tensor = torch.FloatTensor(amino_acid_data)
-contagiousness_labels_tensor = torch.LongTensor(contagiousness_labels)
+X_train_tensor = torch.FloatTensor(X_train)
+y_train_tensor = torch.FloatTensor(y_train)
+X_test_tensor = torch.FloatTensor(X_test)
+y_test_tensor = torch.FloatTensor(y_test)
 
-# Create a TensorDataset for amino acid data and labels
-amino_acid_dataset = TensorDataset(amino_acid_tensor, contagiousness_labels_tensor)
+# Create TensorDatasets for training and testing sets
+train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
 
 # Define training parameters
 num_epochs_amino_acid = 10
 print_interval_amino_acid = 1
 learning_rate_amino_acid = 0.001
 batch_size_amino_acid = 10
-input_size_amino_acid = 20
+input_size_amino_acid = X_train.shape[1]  # Assuming the number of features is the second dimension
 hidden_size_amino_acid = 10
 output_size_amino_acid = 2
 
 # Create the amino acid network
 amino_acid_network = AminoAcidNN(input_size_amino_acid, hidden_size_amino_acid, output_size_amino_acid)
 
-
-
-
-
-
-
-### TODO:
-
-
 # Set optimizer and loss
+optimizer = torch.optim.Adam(amino_acid_network.parameters(), lr=learning_rate_amino_acid)
+criterion = torch.nn.CrossEntropyLoss()
 
+# Create DataLoaders for training and testing sets
+training_loader = DataLoader(train_dataset, batch_size=batch_size_amino_acid, shuffle=True)
+testing_loader = DataLoader(test_dataset, batch_size=batch_size_amino_acid, shuffle=False)
 
+# Train the amino acid network
+nh.train_and_graph_amino_acid_network(amino_acid_network, training_loader, testing_loader, criterion, optimizer,
+                                       num_epochs_amino_acid, learning_rate_amino_acid, logging_interval=1)
 
-# Train, test, compute accuracy
+# Test the amino acid network
+nh.test_amino_acid_network(amino_acid_network, testing_loader, criterion)
 
-nh.train_and_graph_amino_acid_network(network, training_loader, testing_loader, criterion, optimizer, num_epochs,
-                                       learning_rate, logging_interval=1)
-
-nh.test_amino_acid_network(network, data_loader, criterion)
-
-nh.compute_label_accuracy_amino_acid(network, data_loader, label_text="")
+# Compute label accuracy for the amino acid network
+nh.compute_label_accuracy_amino_acid(amino_acid_network, testing_loader, label_text="Contagiousness_Score")
