@@ -10,6 +10,9 @@ class AminoAcidNN(nn.Module):
         self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
+        x = x.float()
         x = F.relu(self.fc1(x))
+        x = x.float()
         x = self.fc2(x)
-        return x
+        return F.sigmoid(x)
+        #return x
