@@ -1,3 +1,4 @@
+### IMPORTS #############################################
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
@@ -6,43 +7,59 @@ import numpy as np
 import matplotlib.pyplot as plt
 from amino_nn import AminoAcidNN
 import nn_helpers as nh
+#########################################################
+
+
+
+######## GET DATA ######################################
 
 # Load data from the "processed_data.csv" file
 df = pd.read_csv('../data/processed_data.csv')
 
 # Extract X & y from dataframe
 y = df['Contagiousness_Score'].values
-df = df.drop(columns='Contagiousness_Score')
-X = df.values
+df = df.drop(columns=['Contagiousness_Score', 'Release_Date', 'Accession'])
+all_X = df.values
 
+
+# print(all_X[:10])
+# print(y[:10])
 # Split the data into training and testing sets (80/20 split)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
+X_train, X_test, y_train, y_test = train_test_split(all_X, y, test_size=0.2, random_state=42)
 # Convert NumPy arrays to PyTorch tensors
-X_train_tensor = torch.FloatTensor(X_train)
-y_train_tensor = torch.FloatTensor(y_train)
-X_test_tensor = torch.FloatTensor(X_test)
-y_test_tensor = torch.FloatTensor(y_test)
+X_train_tensor = torch.from_numpy(X_train)
+y_train_tensor = torch.from_numpy(y_train)
+X_test_tensor = torch.from_numpy(X_test)
+y_test_tensor = torch.from_numpy(y_test)
+
 
 # Create TensorDatasets for training and testing sets
 train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
 test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+#########################################################
 
-# Define training parameters
-num_epochs_amino_acid = 10
+
+
+######### HYPERPARAMS ####################################
+
+num_epochs_amino_acid = 7
 print_interval_amino_acid = 1
 learning_rate_amino_acid = 0.001
-batch_size_amino_acid = 10
+batch_size_amino_acid = 100
 input_size_amino_acid = X_train.shape[1]  # Assuming the number of features is the second dimension
 hidden_size_amino_acid = 10
-output_size_amino_acid = 2
+output_size_amino_acid = 1
+
+#########################################################
+
 
 # Create the amino acid network
 amino_acid_network = AminoAcidNN(input_size_amino_acid, hidden_size_amino_acid, output_size_amino_acid)
 
 # Set optimizer and loss
 optimizer = torch.optim.Adam(amino_acid_network.parameters(), lr=learning_rate_amino_acid)
-criterion = torch.nn.CrossEntropyLoss()
+#criterion = torch.nn.CrossEntropyLoss()
+criterion = torch.nn.BCELoss()
 
 # Create DataLoaders for training and testing sets
 training_loader = DataLoader(train_dataset, batch_size=batch_size_amino_acid, shuffle=True)

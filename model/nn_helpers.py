@@ -14,10 +14,12 @@ def train_amino_acid_network(network, data_loader, optimizer, criterion, batch_l
     network.train()
     avg_loss = 0
     num_batches = 0
-
     for batch, (input_data, target_output) in enumerate(data_loader):
         optimizer.zero_grad()
+        target_output = target_output.float()
         prediction = network(input_data)
+        prediction = prediction.view(100).clone()
+
         loss = criterion(prediction, target_output)
         loss.backward()
         optimizer.step()
@@ -40,6 +42,9 @@ def test_amino_acid_network(network, data_loader, criterion):
     with torch.no_grad():
         for data, target in data_loader:
             output = network(data)
+            output = output.view(100).clone()
+            output = output.float()
+            target = target.float()
             test_loss += criterion(output, target).item()
             num_batches += 1
 
@@ -84,27 +89,33 @@ def train_and_graph_amino_acid_network(network, training_loader, testing_loader,
             best_loss = test_loss
             torch.save(network.state_dict(), 'best_amino_acid_model.pt')
 
-    graph_loss(epoch_counter, train_loss_history, test_loss_history)
+    # graph_loss(epoch_counter, train_loss_history, test_loss_history)
+
 
 # Function to compute label accuracy for amino acid network
 def compute_label_accuracy_amino_acid(network, data_loader, label_text=""):
-    test_loss = 0
-    correct = 0
+    # Number correct, number of samples
+    numCorrect = 0
+    total_samples = 0 
     network.eval()
-
     with torch.no_grad():
         for data, target in data_loader:
             output = network(data)
-            pred = output.argmax(dim=1)
-            correct += (pred == target).sum().item()
-
+            output = output.view(100).clone()
+            x = (output == target).sum()
+            numCorrect += x.item()
+            total_samples += target.size(0)  # Increment the total_samples count
+            print('tot sample:', total_samples)
+            print('corr: ', numCorrect)
+    accuracy_percentage = 100. * numCorrect / total_samples  # Calculate the percentage of correct guesses
     print('\n{}: Accuracy: {}/{} ({:.1f}%)'.format(
-        label_text, correct, len(data_loader.dataset),
-        100. * correct / len(data_loader.dataset)))
+        label_text, numCorrect, total_samples, accuracy_percentage))
+
 
 # Function to draw predictions for amino acid network
 def draw_predictions_amino_acid(network, dataset, num_rows=6, num_cols=10, skip_batches=0):
     data_generator = DataLoader(dataset, batch_size=num_rows * num_cols)
+    #print('data generator:', data_generator)
     data_enumerator = enumerate(data_generator)
 
     for i in range(skip_batches):
