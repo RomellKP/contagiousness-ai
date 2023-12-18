@@ -3,23 +3,47 @@ import sys
 import pandas as pd 
 from datetime import datetime, timedelta
 
-
 ### Reads a fasta file as headers (>), genomes
 def readFasta(fastaFile):
     headers = []
     genomes = []
     with open(fastaFile, 'r') as fasta:
             parser = fastaparser.Reader(fasta, parse_method = 'quick')
-            #adds headers & genomes to arrays
+            # Adds headers & genomes to arrays
             for seq in parser:
                 header = seq.header
                 genome = seq.sequence
+                # Clean to grab accession# only
+                header = header.split("|")
+                header = header[0].strip()
                 headers.append(header)
                 genomes.append(genome)
             for i in range(len(headers)):
                 headers[i] = headers[i].replace(headers[i][0], "", 1)
     
     return headers, genomes
+
+### Adds collection dates and pangolins from all_seqs to the headers entries
+def add_metadata(headers, genomes, all_seqs):
+    # Clean Accession numbers for comparison
+    all_seqs['Accession'] = all_seqs['Accession'].str.strip()
+    all_seqs['Accession'] = all_seqs['Accession'].str.split('.').str[0]
+
+    new_headers, new_genomes = [], []  # Create a new list to store the updated headers
+
+    for i in range(len(headers)):
+        accession = headers[i].split('.')[0].strip()
+        # If found, add
+        if accession in all_seqs['Accession'].values:
+            match_row = all_seqs.loc[all_seqs['Accession'] == accession].iloc[0]
+            pangolin = match_row['Pangolin']
+            colDate = match_row['Collection_Date']
+            new_headers.append(f"{headers[i]}|{colDate}|{pangolin}")  # Add the updated header to the new list
+            new_genomes.append(genomes[i])
+        if (i + 1) % 100 == 0:
+            print(i + 1)
+
+    return new_headers, new_genomes
 
 ### Reads a file to get the amino acids conversion table
 def get_amino_table(filename):
@@ -61,46 +85,44 @@ def countAminos(headers, genomes, conversionTable):
                     else:
                         cCounts[codon] += 1
             aCounts = convert_to_amino_acids(cCounts, conversionTable)
-            # print(aCounts)
             aminoCounts[headers[i]] = aCounts
     return aminoCounts
 
-def readCSV(csvFile):
-    df = pd.read_csv(csvFile)
-    return df
+
 
 # Finds contagiousness score
 def findCont(df):
     scoresDict = {}
-    df['Release_Date'] = pd.to_datetime(df['Release_Date'])
-    for name in df['Accession']:
-        name_df = df[df['Accession'] == name]
+    df['Collection_Date'] = pd.to_datetime(df['Collection_Date'])
+    for name in df['Pangolin']:
+        name_df = df[df['Pangolin'] == name]
 
-        startDate = name_df['Release_Date'].min()
+        startDate = name_df['Collection_Date'].min()
         endDate = startDate + timedelta(days=30)
 
-        uploads_count = name_df[(name_df['Release_Date'] >= startDate) & (name_df['Release_Date'] <= endDate)].shape[0]
+        uploads_count = name_df[(name_df['Collection_Date'] >= startDate) & (name_df['Collection_Date'] <= endDate)].shape[0]
         scoresDict[name] = uploads_count
 
     return scoresDict
 
-### Creates a data frame from data organized like: headers = [Accession,  Release_Date, Aminos(20)... Other, Contagiousness_Score
+### Creates a data frame from data organized like: headers = [Accession,  Collection_Date, Aminos(20)... Other, Contagiousness_Score
 def createDF(countsDict):
     data = []
     for metadata, values in countsDict.items():
         meta = metadata.split('|')
-        accession_number = meta[0].strip()
-        release_date = meta[1].strip()
+        accession = meta[0].strip()
+        date = meta[1].strip()
+        pangolin = meta[2].strip()
 
-        row = {'Accession': accession_number, 'Release_Date': release_date, **values}
+        row = {'Accession': accession, 'Collection_Date': date, 'Pangolin': pangolin, **values}
         data.append(row)
     # Write as a dataframe to csv
     df = pd.DataFrame(data)
     # Filter duplicates by accession number
-    df = df.drop_duplicates(subset=['Accession'])
+    df = df.drop_duplicates(subset="Accession", keep="last")
     # Get contagiousness scores, add to dictionary
     contagiousness_scores = findCont(df)
-    df['Contagiousness_Score'] = df['Accession'].map(contagiousness_scores).fillna(0).astype(int)
+    df['Contagiousness_Score'] = df['Pangolin'].map(contagiousness_scores).fillna(0).astype(int)
     return df
 
 
@@ -108,20 +130,25 @@ def createDF(countsDict):
 def main():
     """
     Reads in a fasta file, cleans it, and writes as readable dataframe to csv
-    Usage: python3 dfCreator.py
-    Example: python3 dfCreator.py ../data/raw_data.fasta ../data/processed_data.csv
+    Usage: python3 dfCreator.py <input_fname> <output_fname>
+    Example: python3 dfCreator.py ../data/raw_data2.fasta ../data/processed_data_spec_scoring2.csv
     """
 
     inputFileName = sys.argv[1]
     outputFileName = sys.argv[2]
 
     # Read user's input file, get conversion table
-    headers, genomes = readFasta(inputFileName)
+    headers, genomes = readFasta(inputFileName)  # Gets only accession#, genome
     convTable = get_amino_table("../data/codon_table.txt")
 
+    # Read in file containing metadata for all accession numbers
+    all_sequences = pd.read_csv('../data/all_sequences.csv')
+
+    headers, genomes = add_metadata(headers, genomes, all_sequences)
+    del all_sequences
     # Count amino acids in data using conversion table
     countsDict = countAminos(headers, genomes, convTable)
-    
+
     # Make dataframe, write to csv
     df = createDF(countsDict)
     df.to_csv(outputFileName, index=False)
