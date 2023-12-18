@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Function to train the amino acid network
-def train_amino_acid_network(network, data_loader, optimizer, criterion, batch_logging=100):
+def train_amino_acid_network(network, data_loader, optimizer, criterion, batch_size, batch_logging=100):
     network.train()
     avg_loss = 0
     num_batches = 0
@@ -18,7 +18,7 @@ def train_amino_acid_network(network, data_loader, optimizer, criterion, batch_l
         optimizer.zero_grad()
         target_output = target_output.float()
         prediction = network(input_data)
-        prediction = prediction.view(100).clone()
+        prediction = prediction.view(batch_size).clone()
 
         loss = criterion(prediction, target_output)
         loss.backward()
@@ -34,7 +34,7 @@ def train_amino_acid_network(network, data_loader, optimizer, criterion, batch_l
     return avg_loss / num_batches
 
 # Function to test the amino acid network
-def test_amino_acid_network(network, data_loader, criterion):
+def test_amino_acid_network(network, data_loader, criterion, batch_size):
     network.eval()
     test_loss = 0
     num_batches = 0
@@ -42,7 +42,7 @@ def test_amino_acid_network(network, data_loader, criterion):
     with torch.no_grad():
         for data, target in data_loader:
             output = network(data)
-            output = output.view(100).clone()
+            output = output.view(batch_size).clone()
             output = output.float()
             target = target.float()
             test_loss += criterion(output, target).item()
@@ -72,7 +72,7 @@ def graph_loss(epoch_counter, train_loss_hist, test_loss_hist, loss_name="Loss",
 
 # Function to train and graph the amino acid network
 def train_and_graph_amino_acid_network(network, training_loader, testing_loader, criterion, optimizer, num_epochs,
-                                       learning_rate, logging_interval=1):
+                                       learning_rate, batch_size, logging_interval=1):
     # Arrays to store training history
     test_loss_history = []
     epoch_counter = []
@@ -80,8 +80,8 @@ def train_and_graph_amino_acid_network(network, training_loader, testing_loader,
     best_loss = float('inf')
 
     for epoch in range(num_epochs):
-        avg_loss = train_amino_acid_network(network, training_loader, optimizer, criterion)
-        test_loss = test_amino_acid_network(network, testing_loader, criterion)
+        avg_loss = train_amino_acid_network(network, training_loader, optimizer, criterion, batch_size)
+        test_loss = test_amino_acid_network(network, testing_loader, criterion, batch_size)
         log_results(epoch, num_epochs, avg_loss, train_loss_history, test_loss, test_loss_history, epoch_counter,
                     logging_interval)
 
@@ -93,23 +93,41 @@ def train_and_graph_amino_acid_network(network, training_loader, testing_loader,
 
 
 # Function to compute label accuracy for amino acid network
+# def compute_label_accuracy_amino_acid(network, data_loader, label_text=""):
+#     # Number correct, number of samples
+#     numCorrect = 0
+#     total_samples = 0 
+#     network.eval()
+#     with torch.no_grad():
+#         for data, target in data_loader:
+#             output = network(data)
+#             output = output.view(100).clone()
+#             x = (output == target).sum()
+#             numCorrect += x.item()
+#             total_samples += target.size(0)  # Increment the total_samples count
+#             print('tot sample:', total_samples)
+#             print('corr: ', numCorrect)
+#     accuracy_percentage = 100. * numCorrect / total_samples  # Calculate the percentage of correct guesses
+#     print('\n{}: Accuracy: {}/{} ({:.1f}%)'.format(
+#         label_text, numCorrect, total_samples, accuracy_percentage))
+
+# Function to compute label accuracy for amino acid network (for regression)
 def compute_label_accuracy_amino_acid(network, data_loader, label_text=""):
-    # Number correct, number of samples
-    numCorrect = 0
-    total_samples = 0 
+    total_absolute_error = 0
+    total_samples = 0
+
     network.eval()
     with torch.no_grad():
         for data, target in data_loader:
             output = network(data)
-            output = output.view(100).clone()
-            x = (output == target).sum()
-            numCorrect += x.item()
-            total_samples += target.size(0)  # Increment the total_samples count
-            print('tot sample:', total_samples)
-            print('corr: ', numCorrect)
-    accuracy_percentage = 100. * numCorrect / total_samples  # Calculate the percentage of correct guesses
-    print('\n{}: Accuracy: {}/{} ({:.1f}%)'.format(
-        label_text, numCorrect, total_samples, accuracy_percentage))
+            output = output.view(-1).clone()
+            
+            absolute_error = torch.abs(output - target)
+            total_absolute_error += absolute_error.sum().item()
+            total_samples += target.size(0)
+
+    mean_absolute_error = total_absolute_error / total_samples
+    print('\n{}: Mean Absolute Error: {:.4f}'.format(label_text, mean_absolute_error))
 
 
 # Function to draw predictions for amino acid network
