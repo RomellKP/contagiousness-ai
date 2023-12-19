@@ -7,27 +7,30 @@
 The purpose of this project is to investigate correlations between the contagiousness of a SARS-COV-2 sample (grouped according to pangolin) and the frequencies of each amino acid present within it. 
 
 ## *Directory Structure:*
-. \
+.
 ├── README.md \
 ├── data \
 │   ├── README_Figures \
+│   │   ├── Vaccine_Model_Barplot.png \
+│   │   └── epoch_graph_vaccine_model.png \
 │   ├── all_sequences.csv \
 │   ├── codon_table.txt \
-│   ├── old_data \
 │   ├── processed_input_data_vacmodel.csv \
 │   ├── processed_input_data_vacmodel_info.txt \
 │   ├── processed_input_data_vacmodel_train_info.txt \
-│   ├── raw_data_small.fasta \
-│   └── raw_input_data.fasta \
+│   └── raw_data_small.fasta \
 ├── data_prep \
 │   ├── dfCreator.py \
 │   └── input_data_analysis.py \
 └── model \
     ├── amino_nn.py \
     ├── model_storage \
+    │   ├── contagiousness_model0.pt \
+    │   └── model_iteration.txt \
     ├── nn_helpers.py \
     ├── result_analysis.py \
-    └── run_model.py \
+    └── run_model.py
+
 
 
 ## *Data Sourcing:*
@@ -58,4 +61,3 @@ Thus, COVID genomes containing higher frequencies of these aminos are <ins>more 
 
 ### *Notes:*
 - raw_input_data.fasta not pushed to github because too large. Instead, a subset has been pushed.
-
